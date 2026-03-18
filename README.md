@@ -1,4 +1,4 @@
-# Bot de Supervivencia Universitaria 🌤️🎒
+# Bot de Supervivencia 🌤️🎒
 
 ## Descripción del Proyecto
 
