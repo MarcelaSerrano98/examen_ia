@@ -1,0 +1,1294 @@
+{
+  "name": "sobrevivir",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "c67c83b7-1d3c-4472-9473-06a240e35f43",
+      "name": "Telegram Trigger",
+      "webhookId": "e3c577a4-9b63-40a8-9dd4-f7374c792651",
+      "credentials": {
+        "telegramApi": {
+          "id": "m9xnsT5Jo3OcRUA4",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = ($json.message?.text || \"\").trim();\n\nconst normalized = text\n  .toLowerCase()\n  .normalize(\"NFD\")\n  .replace(/[\\u0300-\\u036f]/g, \"\")\n  .trim();\n\nconst saludos = [\n  \"hola\",\n  \"buenas\",\n  \"buenos dias\",\n  \"buen dia\",\n  \"buenas tardes\",\n  \"buenas noches\",\n  \"hey\",\n  \"holi\",\n  \"hello\"\n];\n\nconst paises = [\n  \"colombia\",\n  \"mexico\",\n  \"peru\",\n  \"argentina\",\n  \"chile\",\n  \"ecuador\",\n  \"venezuela\",\n  \"brasil\",\n  \"bolivia\",\n  \"paraguay\",\n  \"uruguay\",\n  \"panama\",\n  \"costa rica\",\n  \"guatemala\",\n  \"honduras\",\n  \"nicaragua\",\n  \"el salvador\",\n  \"republica dominicana\",\n  \"españa\",\n  \"espana\",\n  \"estados unidos\",\n  \"canada\"\n];\n\nconst agradecimientos = [\n  \"gracias\",\n  \"muchas gracias\",\n  \"mil gracias\",\n  \"graciass\",\n  \"graciasss\",\n  \"thanks\",\n  \"thx\",\n  \"chao\",\n  \"bye\",\n  \"adios\",\n  \"bye bye\",\n  \"adiosito\",\n  \"chai\",\n  \"chaito\"\n];\n\nconst esRisa = /(ja){2,}|(je){2,}|(ji){2,}|😂/.test(normalized);\nconst esNumero = /^\\d+$/.test(normalized);\nconst textoRaro = !/^[a-z\\s]+$/.test(normalized) || normalized.length < 3;\n\nconst pareceCiudad =\n  /^[a-z\\s]+$/.test(normalized) &&\n  normalized.length >= 3 &&\n  normalized.length <= 30 &&\n  normalized.split(\" \").length <= 4;\n\nlet intent = \"OTRO\";\nlet query = \"\";\n\nif (saludos.includes(normalized)) {\n\n  intent = \"SALUDO\";\n\n} else if (esNumero) {\n\n  intent = \"NUMERO\";\n\n} else if (paises.includes(normalized)) {\n\n  intent = \"PAIS\";\n\n} else if (agradecimientos.includes(normalized)) {\n\n  intent = \"AGRADECIMIENTO\";\n\n} else if (esRisa) {\n\n  intent = \"OTRO\";\n\n} else if (textoRaro) {\n\n  intent = \"OTRO\";\n\n} else if (pareceCiudad) {\n\n  intent = \"UBICACION\";\n  query = text;\n\n}\n\nreturn [\n{\n  chat_id: $json.message?.chat?.id,\n  telegram_user_id: $json.message?.from?.id,\n  telegram_username: $json.message?.from?.username || \"\",\n  raw_text: text,\n  normalized_text: normalized,\n  intent,\n  query\n}\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "1bac76f6-b9da-4454-acf7-4c264164c2e6",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "url": "https://geocoding-api.open-meteo.com/v1/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "={{$json.query}}"
+            },
+            {
+              "name": "count",
+              "value": "1"
+            },
+            {
+              "name": "lenguaje",
+              "value": "es"
+            },
+            {
+              "name": "format",
+              "value": "json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1472,
+        0
+      ],
+      "id": "01848974-3797-4dba-bba6-b4572ab94904",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "071a51d1-e963-4d5a-a9ce-15633a64015f",
+              "leftValue": "={{ $json.results }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1856,
+        -208
+      ],
+      "id": "cffa77f8-3fb5-4cc0-9e7c-7489257f1a0d",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "=No pude encontrar ese lugar 🤔\n\nEscríbeme una ciudad o país más claro.\nPor ejemplo:\nBucaramanga\nBogotá\nMedellin",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2256,
+        48
+      ],
+      "id": "6a2523c1-378d-4486-81d0-2d5ab1a45640",
+      "name": "saludo1",
+      "webhookId": "c926cbb9-89d6-4bec-bb7c-945917af1db4",
+      "credentials": {
+        "telegramApi": {
+          "id": "m9xnsT5Jo3OcRUA4",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.mensaje }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4176,
+        64
+      ],
+      "id": "9e4f74e1-66c8-4798-b216-fb9f5b6d2a13",
+      "name": "encontro",
+      "webhookId": "c926cbb9-89d6-4bec-bb7c-945917af1db4",
+      "credentials": {
+        "telegramApi": {
+          "id": "m9xnsT5Jo3OcRUA4",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1648,
+        -208
+      ],
+      "id": "c661cd09-b3c2-4ea5-ac9c-e264b46f7d45",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d68ae953-b75e-42e2-ad65-bd9671cb4313",
+              "name": "chat_id",
+              "value": "={{ $json.chat_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1360,
+        -176
+      ],
+      "id": "be214200-0b2d-4a3f-b3de-6e17e1476ae2",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "url": "https://api.open-meteo.com/v1/forecast",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "latitude",
+              "value": "={{ $json.results[0].latitude }}"
+            },
+            {
+              "name": "longitude",
+              "value": "={{ $json.results[0].longitude }}"
+            },
+            {
+              "name": "current",
+              "value": "temperature_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m"
+            },
+            {
+              "name": "timezone",
+              "value": "auto"
+            }
+          ]
+        },
+        "options": {
+          "lowercaseHeaders": false,
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          },
+          "response": {
+            "response": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2176,
+        -272
+      ],
+      "id": "8c4d8498-ed0f-4ec0-8a4c-47e8d962d578",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const current = $json.current || {};\n\nconst temp = current.temperature_2m ?? null;\nconst feels = current.apparent_temperature ?? null;\nconst precip = current.precipitation ?? 0;\nconst wind = current.wind_speed_10m ?? 0;\nconst weatherCode = current.weather_code ?? null;\n\nlet climaTexto = \"templado\";\nlet cosas = [];\n\nif (temp !== null) {\n  if (temp >= 30) {\n    climaTexto = \"caluroso\";\n    cosas.push(\"agua\", \"bloqueador\", \"ropa fresca\");\n  } else if (temp <= 15) {\n    climaTexto = \"frío\";\n    cosas.push(\"chaqueta\", \"ropa cómoda\");\n  } else {\n    climaTexto = \"suave\";\n    cosas.push(\"agua\", \"ropa cómoda\");\n  }\n}\n\nif (precip > 0) {\n  climaTexto = \"lluvioso\";\n  cosas.push(\"sombrilla\");\n}\n\nif (wind >= 25) {\n  cosas.push(\"chaqueta ligera\");\n}\n\nconst cosasUnicas = [...new Set(cosas)];\n\nreturn [{\n  ...$json,\n  temp_c: temp,\n  feels_like_c: feels,\n  precipitation_mm: precip,\n  wind_kmh: wind,\n  weather_code: weatherCode,\n  climate_summary: climaTexto,\n  items_to_carry: cosasUnicas,\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2592,
+        -176
+      ],
+      "id": "d405c2ff-a085-4ef8-a1ad-126e4f4386c2",
+      "name": "procesar clma"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:11434/api/chat",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"gemma3\",\n  \"stream\": false,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Eres un asistente universitario colombiano. Escribes mensajes cortos, naturales, útiles y con un toque cercano. No usas numeración, no usas títulos, no haces listas, no hablas como robot, no dices frases genéricas latino neutro. Tu tono debe sonar natural para Colombia.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Datos del clima:\\nTemperatura: {{$json.temp_c}} °C\\nSensación térmica: {{$json.feels_like_c}} °C\\nLluvia: {{$json.precipitation_mm}} mm\\nViento: {{$json.wind_kmh}} km/h\\nResumen: {{$json.climate_summary}}\\nObjetos sugeridos: {{$json.items_to_carry.join(', ')}}\\n\\nEscribe un solo comentario corto para un estudiante universitario en Colombia.\\nDebe sonar natural, útil y agradable.\\nMáximo 25 palabras.\\nSin numeración.\\nSin títulos.\\nSin listas.\\nSin emojis.\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3024,
+        -16
+      ],
+      "id": "6f66c642-fad3-4338-b79a-f5cae7cf82e8",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "973a1251-c497-40c0-915f-3674ad9bb29d",
+              "name": "name",
+              "value": "={{ $json.results[0].name }}",
+              "type": "string"
+            },
+            {
+              "id": "54d16f5c-f23b-42e1-9c8c-f833b5a224bb",
+              "name": "contry",
+              "value": "={{ $json.results[0].country }}",
+              "type": "string"
+            },
+            {
+              "id": "1eaceb6b-2388-4faf-bb9f-6e17ea01955e",
+              "name": "chat_id",
+              "value": "={{ $json.chat_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2208,
+        -576
+      ],
+      "id": "fbd7b53e-c5ca-4add-9142-67354c77982e",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2816,
+        -480
+      ],
+      "id": "59c65f08-7f03-4bb0-878c-deda27ee06b5",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3344,
+        -144
+      ],
+      "id": "adfbcd5f-b6f9-44f9-8454-9fd3cae2e4d2",
+      "name": "Merge3"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zjFzcc1DAUmfcxQ9pKrqHeiixanEvpoEpY7wjS57MDg/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ciudad": "={{ $json.name }}",
+            "clima": "={{ $json.temp_c }}",
+            "consejo": "={{ $json.message.content }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "ciudad",
+              "displayName": "ciudad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "clima",
+              "displayName": "clima",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "consejo",
+              "displayName": "consejo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3952,
+        -288
+      ],
+      "id": "1eafc6ce-b18f-41ad-aec6-38baed83594f",
+      "name": "agregar al historial",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "2dyRtPzonqt2WF0D",
+          "name": "credenciales lmalbarracin57@gmail.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "50c66823-d9ff-45c6-a64e-3fbe607327c1",
+              "name": "name",
+              "value": "={{ $json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "83b70b89-7008-45b9-92cd-fd0e8971c077",
+              "name": "chat_id",
+              "value": "={{ $json.chat_id }}",
+              "type": "string"
+            },
+            {
+              "id": "c0e41c5a-0513-4706-844b-62a561f596aa",
+              "name": "current.apparent_temperature",
+              "value": "={{ $json.current.apparent_temperature }}",
+              "type": "number"
+            },
+            {
+              "id": "ee31d14d-5998-4938-96d4-09eaca02a893",
+              "name": "items_to_carry",
+              "value": "={{ $json.items_to_carry }}",
+              "type": "array"
+            },
+            {
+              "id": "bc080467-31c0-4b5b-b21d-9ef36ee0fdaf",
+              "name": "temp_c",
+              "value": "={{ $json.temp_c }}",
+              "type": "number"
+            },
+            {
+              "id": "f398fd51-376c-434d-b4d0-74ebdf19b9eb",
+              "name": "feels_like_c",
+              "value": "={{ $json.feels_like_c }}",
+              "type": "number"
+            },
+            {
+              "id": "bd7be057-625a-447b-9e7d-1233e402f8bf",
+              "name": "precipitation_mm",
+              "value": "={{ $json.precipitation_mm }}",
+              "type": "number"
+            },
+            {
+              "id": "6cb80ef3-0d12-43f3-8e6c-e8462ee5fdd8",
+              "name": "wind_kmh",
+              "value": "={{ $json.wind_kmh }}",
+              "type": "number"
+            },
+            {
+              "id": "81f21559-4fb1-4888-a1da-9662920c3622",
+              "name": "message.content",
+              "value": "={{ $json.message.content }}",
+              "type": "string"
+            },
+            {
+              "id": "6db9cf36-c833-4976-9af7-66b2e377b2fb",
+              "name": "id",
+              "value": "1zjFzcc1DAUmfcxQ9pKrqHeiixanEvpoEpY7wjS57MDg",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3744,
+        -496
+      ],
+      "id": "2f9d762a-7b15-465d-bf5f-955ffb164bd2",
+      "name": "filtrar datos necesarios"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.mensaje }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2336,
+        528
+      ],
+      "id": "c9ac9be5-67a0-49d8-961f-7f4c5d4442a1",
+      "name": "enviar mensaje al usuario",
+      "webhookId": "c926cbb9-89d6-4bec-bb7c-945917af1db4",
+      "credentials": {
+        "telegramApi": {
+          "id": "m9xnsT5Jo3OcRUA4",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d67fb570-03c9-4181-aa48-cf3d92f1d8ab",
+              "name": "mensaje",
+              "value": "=Hmm… todavía no entendí el lugar 😅\n\nEscríbeme el nombre de una ciudad o un país para decirte cómo sobrevivir hoy en la universidad.\n\nPor ejemplo:\nBucaramanga\nMedellín\nBogota",
+              "type": "string"
+            },
+            {
+              "id": "194ec9c8-97fc-492e-839b-40e6fc248c91",
+              "name": "chat_id",
+              "value": "={{ $json.chat_id }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1728,
+        1088
+      ],
+      "id": "c957003d-b8d9-4e7e-ad6e-b02270299336",
+      "name": "mensaje erroneo"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d67fb570-03c9-4181-aa48-cf3d92f1d8ab",
+              "name": "mensaje",
+              "value": "=Por el momento solo manejamos ciudades de Colombia 🇨🇴\n\nEstamos en proceso de crecer para muy pronto ayudarte también con otros países.\nMientras tanto, escríbeme una ciudad como:\nBucaramanga, Medellín o Bogotá.",
+              "type": "string"
+            },
+            {
+              "id": "194ec9c8-97fc-492e-839b-40e6fc248c91",
+              "name": "chat_id",
+              "value": "={{ $json.chat_id }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1712,
+        608
+      ],
+      "id": "c44d1e7a-09b3-4758-9965-419e6204bd9b",
+      "name": "mensaje pais"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d67fb570-03c9-4181-aa48-cf3d92f1d8ab",
+              "name": "mensaje",
+              "value": "=No puedo procesar números como ubicación 😅\n\nPor favor escríbeme el nombre de una ciudad de Colombia.\nPor ejemplo:\nBucaramanga\nMedellín\nBogotá",
+              "type": "string"
+            },
+            {
+              "id": "194ec9c8-97fc-492e-839b-40e6fc248c91",
+              "name": "chat_id",
+              "value": "={{ $json.chat_id }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1712,
+        400
+      ],
+      "id": "21a072de-ad58-4333-9f6d-ef143d51e10f",
+      "name": "mensaje numeros"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d67fb570-03c9-4181-aa48-cf3d92f1d8ab",
+              "name": "mensaje",
+              "value": "=¡Hola! 👋   \nSoy tu Bot de Supervivencia al día a día Dime una ciudad de Colombia y te dire: \n🌡️ Cómo está el clima  \n🎒 Qué deberías llevar  \n😂 Un consejito \n\nEjemplos:  \nBucaramanga \nBogotá  \nMedellín",
+              "type": "string"
+            },
+            {
+              "id": "194ec9c8-97fc-492e-839b-40e6fc248c91",
+              "name": "chat_id",
+              "value": "={{ $json.chat_id }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1712,
+        224
+      ],
+      "id": "1955ceeb-4708-494e-baf3-dc98e6dfd5ff",
+      "name": "mensaje saludo"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d67fb570-03c9-4181-aa48-cf3d92f1d8ab",
+              "name": "mensaje",
+              "value": "=¡Con gusto! 😊\n\nCuando necesites otro consejo para sobrevivir a estos climas, solo escríbeme una ciudad de Colombia y revisamos el clima juntos.",
+              "type": "string"
+            },
+            {
+              "id": "194ec9c8-97fc-492e-839b-40e6fc248c91",
+              "name": "chat_id",
+              "value": "={{ $json.chat_id }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1760,
+        800
+      ],
+      "id": "b82cd7ed-abcf-4b9f-8415-2743262c12a0",
+      "name": "mensaje garcias"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "adc59dc5-753b-46be-b18d-2addc2c47021",
+              "leftValue": "={{ $json.intent }}",
+              "rightValue": "AGRADECIMIENTO",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1440,
+        848
+      ],
+      "id": "3fbbc6e2-d03f-425f-a79c-d40be5e69803",
+      "name": "agradecimiento"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8eb8fe53-fc37-42c6-bca9-494117bfea40",
+              "leftValue": "={{ $json.intent }}",
+              "rightValue": "PAIS",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1312,
+        592
+      ],
+      "id": "d5adfc4a-898c-432a-a4bc-4a8463f41aa7",
+      "name": "identifica pais"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "caaade84-4145-47e7-b829-9a339bcc7d4d",
+              "leftValue": "={{ $json.intent }}",
+              "rightValue": "NUMERO",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1088,
+        368
+      ],
+      "id": "d1c86cc5-83ef-4735-ad93-5ef20c4c0f07",
+      "name": "identifica numero"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b69762c5-fb79-49c0-ae84-2dce26b9f6ec",
+              "leftValue": "={{ $json.intent }}",
+              "rightValue": "UBICACION",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        848,
+        144
+      ],
+      "id": "7f0ae39f-ac3b-4ba4-ad10-fe3128495be9",
+      "name": "identifica ubicacion"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0ecadd51-e403-47f7-83dc-95bc7b2956d4",
+              "leftValue": "={{ $json.intent }}",
+              "rightValue": "SALUDO",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        624,
+        -32
+      ],
+      "id": "160331a6-e491-4e7d-bc39-34850b5a6787",
+      "name": "identifica saludo"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4ed9b480-b162-4e15-9997-3199117d65e8",
+              "leftValue": "={{ $json.temp_c }}",
+              "rightValue": 28,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3552,
+        -144
+      ],
+      "id": "316d2ada-3f74-4f5a-8308-a2ba179ff1a2",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1218a300-9041-4983-be3a-75d6d92cbe52",
+              "name": "mensaje",
+              "value": "=🎓 Supervivencia en {{$json.name || $json.place_name || 'tu ciudad'}}  \n🌡️ Temperatura: {{$json.temp_c}} °C \n🥵 Sensación térmica: {{$json.feels_like_c}} °C \n🌧️ Lluvia: {{$json.precipitation_mm}} mm \n💨 Viento: {{$json.wind_kmh}} km/h  \n🎒 Qué llevar: • {{$json.items_to_carry.join('\\n• ')}}  \n😄 Consejo del día: {{ $json.message.content }}",
+              "type": "string"
+            },
+            {
+              "id": "99327f62-8c39-4fce-a46e-62e193a4ea68",
+              "name": "chat_id",
+              "value": "={{ $json.chat_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3824,
+        128
+      ],
+      "id": "6b800a74-7a94-4286-90b6-19354ab5c9ee",
+      "name": "clima normal"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "198d6e26-19db-460b-82d4-74f0a5a8eb1e",
+              "name": "mensaje",
+              "value": "=🎓 Supervivencia en {{$json.name || $json.place_name || 'tu ciudad'}}   \n🌡️ Temperatura: {{$json.temp_c}} °C  \n🥵 Sensación térmica: {{$json.feels_like_c}} °C  \n\n🔥 Alerta de calor\\nHoy hace bastante calor. Mantente hidratado y evita caminar mucho bajo el sol.\n\n🎒 Qué llevar: • {{$json.items_to_carry.join('\\n• ')}}   \n😄 Consejo del día: \n{{ $json.message.content }}",
+              "type": "string"
+            },
+            {
+              "id": "f67e89c5-f5db-42fb-b94c-9ef01f589d0e",
+              "name": "chat_id",
+              "value": "={{ $json.chat_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3840,
+        -96
+      ],
+      "id": "1916fad8-08e8-4849-a7b0-dafbeb4dcf6e",
+      "name": "alerta calor"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "identifica saludo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "saludo1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "procesar clma",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "procesar clma": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "saludo1": {
+      "main": [
+        []
+      ]
+    },
+    "Merge3": {
+      "main": [
+        [
+          {
+            "node": "filtrar datos necesarios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "agregar al historial": {
+      "main": [
+        []
+      ]
+    },
+    "filtrar datos necesarios": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "mensaje erroneo": {
+      "main": [
+        [
+          {
+            "node": "enviar mensaje al usuario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "mensaje pais": {
+      "main": [
+        [
+          {
+            "node": "enviar mensaje al usuario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "mensaje numeros": {
+      "main": [
+        [
+          {
+            "node": "enviar mensaje al usuario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "mensaje saludo": {
+      "main": [
+        [
+          {
+            "node": "enviar mensaje al usuario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "mensaje garcias": {
+      "main": [
+        [
+          {
+            "node": "enviar mensaje al usuario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "agradecimiento": {
+      "main": [
+        [
+          {
+            "node": "mensaje garcias",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "mensaje erroneo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "identifica pais": {
+      "main": [
+        [
+          {
+            "node": "mensaje pais",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "agradecimiento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "identifica numero": {
+      "main": [
+        [
+          {
+            "node": "mensaje numeros",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "identifica pais",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "identifica ubicacion": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "identifica numero",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "identifica saludo": {
+      "main": [
+        [
+          {
+            "node": "mensaje saludo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "identifica ubicacion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "alerta calor",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "agregar al historial",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "clima normal",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "agregar al historial",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "clima normal": {
+      "main": [
+        [
+          {
+            "node": "encontro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "alerta calor": {
+      "main": [
+        [
+          {
+            "node": "encontro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "c129fecb-6ca4-4f73-b36c-6c6811cb98d0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "de50ee6ae1ff8d279adeae3558ab28bd6d0769c812f2e2e359c6a112ade4dc9e"
+  },
+  "id": "fqncFXFrqeLoSREt",
+  "tags": []
+}
